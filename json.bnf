@@ -1,0 +1,15 @@
+<json> ::= <object> | <array>
+<object> ::= "{" <members> "}"
+<members> ::= <pair> | <pair> "," <members>
+<pair> ::= <string> ":" <value>
+<array> ::= "[" <elements> "]"
+<elements> ::= <value> | <value> "," <elements>
+<value> ::= <string> | <number> | <object> | <array> | "true" | "false" | "null"
+<string> ::= "'" <characters> "'"
+<characters> ::= <character> | <character> <characters>
+<character> ::= [a-z]
+<number> ::= <integer> | <integer> "." <fraction> | <integer> "." <fraction> <exponent> | <integer> <exponent>
+<integer> ::= <digit> | <digit> <integer>
+<digit> ::= [0-9]
+<fraction> ::= <digit> <fraction>
+<exponent> ::= <exponent> <exponent>
