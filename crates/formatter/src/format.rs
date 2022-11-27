@@ -80,6 +80,9 @@ impl Formatter {
             s.push_str(&self.indent_string());
             s.push_str(&self.format(child));
         }
+        if self.options.trailing_commas {
+            s.push(',');
+        }
         self.down_indent();
         s.push('\n');
         s.push_str(&self.indent_string());
@@ -101,6 +104,9 @@ impl Formatter {
             s.push('\n');
             s.push_str(&self.indent_string());
             s.push_str(&self.format(child));
+        }
+        if self.options.trailing_commas {
+            s.push(',');
         }
         self.down_indent();
         s.push('\n');
@@ -210,14 +216,12 @@ mod tests {
                 Node::new(
                     SyntaxKind::ArrayLiteralExpression,
                     vec![
-                        Node::new(SyntaxKind::StringLiteral("hello".to_string()), vec![]),
-                        Node::new(SyntaxKind::NumberLiteral(42.0), vec![]),
-                        Node::new(SyntaxKind::TrueKeyword, vec![]),
-                        Node::new(SyntaxKind::FalseKeyword, vec![]),
-                        Node::new(SyntaxKind::NullKeyword, vec![]),
+                        Node::new(SyntaxKind::NumberLiteral(1.0), vec![]),
+                        Node::new(SyntaxKind::NumberLiteral(2.0), vec![]),
                     ],
                 ),
-                "[\n    \"hello\",\n    42,\n    true,\n    false,\n    null\n]".to_string(),
+                "[\n    1,\n    2\n]".to_string(),
+                "[\n    1,\n    2,\n]".to_string(),
             ),
             (
                 Node::new(
@@ -234,13 +238,15 @@ mod tests {
                     ],
                 ),
                 "[\n    [\n        1\n    ],\n    [\n        2\n    ]\n]".to_string(),
+                "[\n    [\n        1,\n    ],\n    [\n        2,\n    ],\n]".to_string(),
             ),
         ];
 
-        for (node, expected) in cases {
+        for (node, expected, expected_with_trailing_commas) in cases {
             let mut formatter = Formatter::new(Node::new(SyntaxKind::End, vec![]), None);
-            println!("{}", formatter.format_array(&node));
             assert_eq!(formatter.format_array(&node), expected);
+            formatter.options.trailing_commas = true;
+            assert_eq!(formatter.format_array(&node), expected_with_trailing_commas);
         }
     }
 
@@ -258,37 +264,10 @@ mod tests {
                                 Node::new(SyntaxKind::StringLiteral("world".to_string()), vec![]),
                             ],
                         ),
-                        Node::new(
-                            SyntaxKind::PropertyAssignment,
-                            vec![
-                                Node::new(SyntaxKind::StringLiteral("foo".to_string()), vec![]),
-                                Node::new(SyntaxKind::NumberLiteral(42.0), vec![]),
-                            ],
-                        ),
-                        Node::new(
-                            SyntaxKind::PropertyAssignment,
-                            vec![
-                                Node::new(SyntaxKind::StringLiteral("bar".to_string()), vec![]),
-                                Node::new(SyntaxKind::TrueKeyword, vec![]),
-                            ],
-                        ),
-                        Node::new(
-                            SyntaxKind::PropertyAssignment,
-                            vec![
-                                Node::new(SyntaxKind::StringLiteral("baz".to_string()), vec![]),
-                                Node::new(SyntaxKind::FalseKeyword, vec![]),
-                            ],
-                        ),
-                        Node::new(
-                            SyntaxKind::PropertyAssignment,
-                            vec![
-                                Node::new(SyntaxKind::StringLiteral("qux".to_string()), vec![]),
-                                Node::new(SyntaxKind::NullKeyword, vec![]),
-                            ],
-                        ),
                     ],
                 ),
-                "{\n    \"hello\": \"world\",\n    \"foo\": 42,\n    \"bar\": true,\n    \"baz\": false,\n    \"qux\": null\n}".to_string(),
+                "{\n    \"hello\": \"world\"\n}".to_string(),
+                "{\n    \"hello\": \"world\",\n}".to_string(),
             ),
             (
                 Node::new(
@@ -333,13 +312,18 @@ mod tests {
                     ],
                 ),
                 "{\n    \"hello\": {\n        \"foo\": 42\n    },\n    \"world\": {\n        \"bar\": 42\n    }\n}".to_string(),
+                "{\n    \"hello\": {\n        \"foo\": 42,\n    },\n    \"world\": {\n        \"bar\": 42,\n    },\n}".to_string(),
             ),
         ];
 
-        for (node, expected) in cases {
+        for (node, expected, expected_with_trailing_commas) in cases {
             let mut formatter = Formatter::new(Node::new(SyntaxKind::End, vec![]), None);
-            println!("{}", formatter.format_object(&node));
             assert_eq!(formatter.format_object(&node), expected);
+            formatter.options.trailing_commas = true;
+            assert_eq!(
+                formatter.format_object(&node),
+                expected_with_trailing_commas
+            );
         }
     }
 
@@ -393,7 +377,6 @@ mod tests {
 
         for (node, expected) in cases {
             let mut formatter = Formatter::new(Node::new(SyntaxKind::End, vec![]), None);
-            println!("{}", formatter.format(&node));
             assert_eq!(formatter.format(&node), expected);
         }
     }
