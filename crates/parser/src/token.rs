@@ -43,15 +43,15 @@ impl Tokenizer {
         Tokenizer { char_stream }
     }
 
-    pub fn peek_char(&mut self) -> Option<&char> {
+    fn peek_char(&mut self) -> Option<&char> {
         self.char_stream.peek()
     }
 
-    pub fn next_char(&mut self) -> Option<char> {
+    fn next_char(&mut self) -> Option<char> {
         self.char_stream.next()
     }
 
-    pub fn consume_char(&mut self) -> Token {
+    fn consume_char(&mut self) -> Token {
         match self.next_char() {
             Some(c) => match CHAR_TOKENS.get(&c) {
                 Some(token) => token.clone(),
@@ -61,7 +61,7 @@ impl Tokenizer {
         }
     }
 
-    pub fn consume_string(&mut self) -> Token {
+    fn consume_string(&mut self) -> Token {
         if self.peek_char() == Some(&'"') {
             self.next_char(); // the first "
         }
@@ -76,7 +76,7 @@ impl Tokenizer {
         Token::StringValue(s)
     }
 
-    pub fn consume_number(&mut self) -> Token {
+    fn consume_number(&mut self) -> Token {
         let mut s = String::new();
         loop {
             match self.peek_char() {
@@ -93,7 +93,7 @@ impl Tokenizer {
         }
     }
 
-    pub fn consume_keyword(&mut self) -> Token {
+    fn consume_keyword(&mut self) -> Token {
         let mut keyword = String::new();
         loop {
             let c = self.peek_char();
@@ -111,7 +111,7 @@ impl Tokenizer {
         }
     }
 
-    pub fn consume_whitespace(&mut self) {
+    fn consume_whitespace(&mut self) {
         loop {
             match self.peek_char() {
                 Some(c) if c.is_whitespace() => {
@@ -122,7 +122,7 @@ impl Tokenizer {
         }
     }
 
-    pub fn next_token(&mut self) -> Token {
+    fn next_token(&mut self) -> Token {
         self.consume_whitespace();
         let c = self.peek_char();
         match c {
