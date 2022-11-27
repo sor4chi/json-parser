@@ -17,16 +17,15 @@ impl Default for FormatOptions {
         }
     }
 }
+
 struct Formatter {
-    source: Node,
     indent: usize,
     options: FormatOptions,
 }
 
 impl Formatter {
-    fn new(source: Node, _options: Option<FormatOptions>) -> Self {
+    fn new(_options: Option<FormatOptions>) -> Self {
         Formatter {
-            source,
             indent: 0,
             options: _options.unwrap_or_default(),
         }
@@ -172,7 +171,7 @@ mod tests {
         ];
 
         for (options, expected) in cases {
-            let mut formatter = Formatter::new(Node::new(SyntaxKind::End, vec![]), options);
+            let mut formatter = Formatter::new(options);
             formatter.up_indent();
             assert_eq!(formatter.indent_string(), expected);
         }
@@ -204,7 +203,7 @@ mod tests {
         ];
 
         for (node, expected) in cases {
-            let formatter = Formatter::new(Node::new(SyntaxKind::End, vec![]), None);
+            let formatter = Formatter::new(None);
             assert_eq!(formatter.format_primitive(&node), expected);
         }
     }
@@ -243,7 +242,7 @@ mod tests {
         ];
 
         for (node, expected, expected_with_trailing_commas) in cases {
-            let mut formatter = Formatter::new(Node::new(SyntaxKind::End, vec![]), None);
+            let mut formatter = Formatter::new(None);
             assert_eq!(formatter.format_array(&node), expected);
             formatter.options.trailing_commas = true;
             assert_eq!(formatter.format_array(&node), expected_with_trailing_commas);
@@ -317,7 +316,7 @@ mod tests {
         ];
 
         for (node, expected, expected_with_trailing_commas) in cases {
-            let mut formatter = Formatter::new(Node::new(SyntaxKind::End, vec![]), None);
+            let mut formatter = Formatter::new(None);
             assert_eq!(formatter.format_object(&node), expected);
             formatter.options.trailing_commas = true;
             assert_eq!(
@@ -376,7 +375,7 @@ mod tests {
         ];
 
         for (node, expected) in cases {
-            let mut formatter = Formatter::new(Node::new(SyntaxKind::End, vec![]), None);
+            let mut formatter = Formatter::new(None);
             assert_eq!(formatter.format(&node), expected);
         }
     }
