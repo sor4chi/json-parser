@@ -11,10 +11,22 @@ pub enum SyntaxKind {
     TrueKeyword,
     FalseKeyword,
     NullKeyword,
-    PropertyAssignment(String, Box<SyntaxKind>),
-    ObjectLiteralExpression(Vec<SyntaxKind>),
-    ArrayLiteralExpression(Vec<SyntaxKind>),
+    PropertyAssignment(String),
+    ObjectLiteralExpression,
+    ArrayLiteralExpression,
     End,
+}
+
+#[derive(Debug, PartialEq, PartialOrd, Clone)]
+pub struct Node {
+    pub kind: SyntaxKind,
+    pub children: Vec<Node>,
+}
+
+impl Node {
+    pub fn new(kind: SyntaxKind, children: Vec<Node>) -> Self {
+        Node { kind, children }
+    }
 }
 
 pub struct Parser {
@@ -44,33 +56,33 @@ impl Parser {
         }
     }
 
-    pub fn consume_string(&mut self) -> SyntaxKind {
+    pub fn consume_string(&mut self) -> Node {
         let token = self.consume_token();
         match token {
-            Token::StringValue(value) => SyntaxKind::StringLiteral(value),
+            Token::StringValue(value) => Node::new(SyntaxKind::StringLiteral(value), vec![]),
             _ => unreachable!(),
         }
     }
 
-    pub fn consume_number(&mut self) -> SyntaxKind {
+    pub fn consume_number(&mut self) -> Node {
         let token = self.consume_token();
         match token {
-            Token::NumberValue(value) => SyntaxKind::NumberLiteral(value),
+            Token::NumberValue(value) => Node::new(SyntaxKind::NumberLiteral(value), vec![]),
             _ => unreachable!(),
         }
     }
 
-    pub fn consume_keyword(&mut self) -> SyntaxKind {
+    pub fn consume_keyword(&mut self) -> Node {
         let token = self.consume_token();
         match token {
-            Token::BooleanValue(true) => SyntaxKind::TrueKeyword,
-            Token::BooleanValue(false) => SyntaxKind::FalseKeyword,
-            Token::NullValue => SyntaxKind::NullKeyword,
+            Token::BooleanValue(true) => Node::new(SyntaxKind::TrueKeyword, vec![]),
+            Token::BooleanValue(false) => Node::new(SyntaxKind::FalseKeyword, vec![]),
+            Token::NullValue => Node::new(SyntaxKind::NullKeyword, vec![]),
             _ => unreachable!("Unexpected token of input"),
         }
     }
 
-    pub fn consume_property_assignment(&mut self) -> Result<SyntaxKind, String> {
+    pub fn consume_property_assignment(&mut self) -> Result<Node, String> {
         let property_name = match self.peek_token() {
             Some(Token::StringValue(s)) => s.clone(),
             _ => return Err("Unexpected token of input".to_string()),
@@ -78,15 +90,15 @@ impl Parser {
         self.consume_token();
         self.consume_token();
         match self.consume_value() {
-            Ok(value) => Ok(SyntaxKind::PropertyAssignment(
-                property_name,
-                Box::new(value),
+            Ok(value) => Ok(Node::new(
+                SyntaxKind::PropertyAssignment(property_name),
+                vec![value],
             )),
             Err(e) => Err(e),
         }
     }
 
-    pub fn consume_object(&mut self) -> Result<SyntaxKind, String> {
+    pub fn consume_object(&mut self) -> Result<Node, String> {
         let mut property_assignments = Vec::new();
         self.consume_token();
         loop {
@@ -107,10 +119,13 @@ impl Parser {
                 _ => return Err("Unexpected token of input".to_string()),
             }
         }
-        Ok(SyntaxKind::ObjectLiteralExpression(property_assignments))
+        Ok(Node::new(
+            SyntaxKind::ObjectLiteralExpression,
+            property_assignments,
+        ))
     }
 
-    pub fn consume_array(&mut self) -> Result<SyntaxKind, String> {
+    pub fn consume_array(&mut self) -> Result<Node, String> {
         let mut elements = Vec::new();
         self.consume_token();
         loop {
@@ -136,10 +151,10 @@ impl Parser {
                 _ => return Err("Unexpected token of input".to_string()),
             }
         }
-        Ok(SyntaxKind::ArrayLiteralExpression(elements))
+        Ok(Node::new(SyntaxKind::ArrayLiteralExpression, elements))
     }
 
-    pub fn consume_value(&mut self) -> Result<SyntaxKind, String> {
+    pub fn consume_value(&mut self) -> Result<Node, String> {
         match self.peek_token() {
             Some(Token::StringValue(_)) => Ok(self.consume_string()),
             Some(Token::NumberValue(_)) => Ok(self.consume_number()),
@@ -150,7 +165,7 @@ impl Parser {
         }
     }
 
-    pub fn parse(&mut self) -> SyntaxKind {
+    pub fn parse(&mut self) -> Node {
         let first_token = self.peek_token();
         let result = match first_token {
             Some(Token::LBrace) => self.consume_object(),
@@ -202,9 +217,9 @@ mod tests {
         let success_cases = vec![
             (
                 r#""hello": 123"#,
-                Ok(SyntaxKind::PropertyAssignment(
-                    "hello".to_string(),
-                    Box::new(SyntaxKind::NumberLiteral(123.0)),
+                Ok(Node::new(
+                    SyntaxKind::PropertyAssignment("hello".to_string()),
+                    vec![Node::new(SyntaxKind::NumberLiteral(123.0), vec![])],
                 )),
             ),
             (
@@ -224,23 +239,32 @@ mod tests {
         let cases = vec![
             (
                 r#"{"hello": 123}"#,
-                SyntaxKind::ObjectLiteralExpression(vec![SyntaxKind::PropertyAssignment(
-                    "hello".to_string(),
-                    Box::new(SyntaxKind::NumberLiteral(123.0)),
-                )]),
+                Node::new(
+                    SyntaxKind::ObjectLiteralExpression,
+                    vec![Node::new(
+                        SyntaxKind::PropertyAssignment("hello".to_string()),
+                        vec![Node::new(SyntaxKind::NumberLiteral(123.0), vec![])],
+                    )],
+                ),
             ),
             (
                 r#"{"hello": 123, "world": "hello"}"#,
-                SyntaxKind::ObjectLiteralExpression(vec![
-                    SyntaxKind::PropertyAssignment(
-                        "hello".to_string(),
-                        Box::new(SyntaxKind::NumberLiteral(123.0)),
-                    ),
-                    SyntaxKind::PropertyAssignment(
-                        "world".to_string(),
-                        Box::new(SyntaxKind::StringLiteral("hello".to_string())),
-                    ),
-                ]),
+                Node::new(
+                    SyntaxKind::ObjectLiteralExpression,
+                    vec![
+                        Node::new(
+                            SyntaxKind::PropertyAssignment("hello".to_string()),
+                            vec![Node::new(SyntaxKind::NumberLiteral(123.0), vec![])],
+                        ),
+                        Node::new(
+                            SyntaxKind::PropertyAssignment("world".to_string()),
+                            vec![Node::new(
+                                SyntaxKind::StringLiteral("hello".to_string()),
+                                vec![],
+                            )],
+                        ),
+                    ],
+                ),
             ),
         ];
 
@@ -255,14 +279,20 @@ mod tests {
         let cases = vec![
             (
                 r#"[123]"#,
-                SyntaxKind::ArrayLiteralExpression(vec![SyntaxKind::NumberLiteral(123.0)]),
+                Node::new(
+                    SyntaxKind::ArrayLiteralExpression,
+                    vec![Node::new(SyntaxKind::NumberLiteral(123.0), vec![])],
+                ),
             ),
             (
                 r#"[123, "hello"]"#,
-                SyntaxKind::ArrayLiteralExpression(vec![
-                    SyntaxKind::NumberLiteral(123.0),
-                    SyntaxKind::StringLiteral("hello".to_string()),
-                ]),
+                Node::new(
+                    SyntaxKind::ArrayLiteralExpression,
+                    vec![
+                        Node::new(SyntaxKind::NumberLiteral(123.0), vec![]),
+                        Node::new(SyntaxKind::StringLiteral("hello".to_string()), vec![]),
+                    ],
+                ),
             ),
         ];
 
@@ -275,30 +305,40 @@ mod tests {
     #[test]
     fn test_consume_value() {
         let cases = vec![
-            ("123", Ok(SyntaxKind::NumberLiteral(123.0))),
+            (
+                "123",
+                Ok(Node::new(SyntaxKind::NumberLiteral(123.0), vec![])),
+            ),
             (
                 r#""hello""#,
-                Ok(SyntaxKind::StringLiteral("hello".to_string())),
+                Ok(Node::new(
+                    SyntaxKind::StringLiteral("hello".to_string()),
+                    vec![],
+                )),
             ),
-            ("true", Ok(SyntaxKind::TrueKeyword)),
-            ("false", Ok(SyntaxKind::FalseKeyword)),
-            ("null", Ok(SyntaxKind::NullKeyword)),
+            ("true", Ok(Node::new(SyntaxKind::TrueKeyword, vec![]))),
+            ("false", Ok(Node::new(SyntaxKind::FalseKeyword, vec![]))),
+            ("null", Ok(Node::new(SyntaxKind::NullKeyword, vec![]))),
             (
                 r#"{"hello": 123}"#,
-                Ok(SyntaxKind::ObjectLiteralExpression(vec![
-                    SyntaxKind::PropertyAssignment(
-                        "hello".to_string(),
-                        Box::new(SyntaxKind::NumberLiteral(123.0)),
-                    ),
-                ])),
+                Ok(Node::new(
+                    SyntaxKind::ObjectLiteralExpression,
+                    vec![Node::new(
+                        SyntaxKind::PropertyAssignment("hello".to_string()),
+                        vec![Node::new(SyntaxKind::NumberLiteral(123.0), vec![])],
+                    )],
+                )),
             ),
             (
                 r#"[1, 2, 3]"#,
-                Ok(SyntaxKind::ArrayLiteralExpression(vec![
-                    SyntaxKind::NumberLiteral(1.0),
-                    SyntaxKind::NumberLiteral(2.0),
-                    SyntaxKind::NumberLiteral(3.0),
-                ])),
+                Ok(Node::new(
+                    SyntaxKind::ArrayLiteralExpression,
+                    vec![
+                        Node::new(SyntaxKind::NumberLiteral(1.0), vec![]),
+                        Node::new(SyntaxKind::NumberLiteral(2.0), vec![]),
+                        Node::new(SyntaxKind::NumberLiteral(3.0), vec![]),
+                    ],
+                )),
             ),
             ("", Err("Unexpected token of input".to_string())),
             (
@@ -318,29 +358,41 @@ mod tests {
         let cases = vec![
             (
                 r#"{"hello": 123}"#,
-                SyntaxKind::ObjectLiteralExpression(vec![SyntaxKind::PropertyAssignment(
-                    "hello".to_string(),
-                    Box::new(SyntaxKind::NumberLiteral(123.0)),
-                )]),
+                Node::new(
+                    SyntaxKind::ObjectLiteralExpression,
+                    vec![Node::new(
+                        SyntaxKind::PropertyAssignment("hello".to_string()),
+                        vec![Node::new(SyntaxKind::NumberLiteral(123.0), vec![])],
+                    )],
+                ),
             ),
             (
                 r#"[1, 2, 3]"#,
-                SyntaxKind::ArrayLiteralExpression(vec![
-                    SyntaxKind::NumberLiteral(1.0),
-                    SyntaxKind::NumberLiteral(2.0),
-                    SyntaxKind::NumberLiteral(3.0),
-                ]),
+                Node::new(
+                    SyntaxKind::ArrayLiteralExpression,
+                    vec![
+                        Node::new(SyntaxKind::NumberLiteral(1.0), vec![]),
+                        Node::new(SyntaxKind::NumberLiteral(2.0), vec![]),
+                        Node::new(SyntaxKind::NumberLiteral(3.0), vec![]),
+                    ],
+                ),
             ),
             (
                 r#"{"hello": [1, 2, 3]}"#,
-                SyntaxKind::ObjectLiteralExpression(vec![SyntaxKind::PropertyAssignment(
-                    "hello".to_string(),
-                    Box::new(SyntaxKind::ArrayLiteralExpression(vec![
-                        SyntaxKind::NumberLiteral(1.0),
-                        SyntaxKind::NumberLiteral(2.0),
-                        SyntaxKind::NumberLiteral(3.0),
-                    ])),
-                )]),
+                Node::new(
+                    SyntaxKind::ObjectLiteralExpression,
+                    vec![Node::new(
+                        SyntaxKind::PropertyAssignment("hello".to_string()),
+                        vec![Node::new(
+                            SyntaxKind::ArrayLiteralExpression,
+                            vec![
+                                Node::new(SyntaxKind::NumberLiteral(1.0), vec![]),
+                                Node::new(SyntaxKind::NumberLiteral(2.0), vec![]),
+                                Node::new(SyntaxKind::NumberLiteral(3.0), vec![]),
+                            ],
+                        )],
+                    )],
+                ),
             ),
         ];
 
