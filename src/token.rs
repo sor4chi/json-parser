@@ -4,7 +4,7 @@ use std::vec::IntoIter;
 
 pub type PeekableIter<T> = Peekable<IntoIter<T>>;
 
-#[derive(Debug, PartialEq, Eq, Clone)]
+#[derive(Debug, PartialEq, PartialOrd, Clone)]
 pub enum Token {
     LBrace,
     RBrace,
@@ -12,12 +12,11 @@ pub enum Token {
     RBracket,
     Colon,
     Comma,
-    String,
-    Number,
-    True,
-    False,
-    Null,
-    End
+    StringValue(String),
+    NumberValue(f64),
+    BooleanValue(bool),
+    NullValue,
+    End,
 }
 
 static CHAR_TOKENS: phf::Map<char, Token> = phf_map! {
@@ -30,9 +29,9 @@ static CHAR_TOKENS: phf::Map<char, Token> = phf_map! {
 };
 
 static KEYWORD_TOKENS: phf::Map<&'static str, Token> = phf_map! {
-    "true" => Token::True,
-    "false" => Token::False,
-    "null" => Token::Null,
+    "true" => Token::BooleanValue(true),
+    "false" => Token::BooleanValue(false),
+    "null" => Token::NullValue,
 };
 
 pub struct Tokenizer {
@@ -68,26 +67,32 @@ impl Tokenizer {
         if self.peek_char() == Some(&'"') {
             self.next_char(); // the first "
         }
+        let mut s = String::new();
         loop {
             match self.next_char() {
                 Some('"') => break,
-                Some(_) => continue,
+                Some(c) => s.push(c),
                 None => panic!("Unexpected end of input"),
             }
         }
-        Token::String
+        Token::StringValue(s)
     }
 
     pub fn consume_number(&mut self) -> Token {
+        let mut s = String::new();
         loop {
             match self.peek_char() {
-                Some(c) if c.is_numeric() => {
-                    self.next_char();
-                }
+                Some(c) if c.is_numeric() || c == &'.' => match self.next_char() {
+                    Some(c) => s.push(c),
+                    None => panic!("Unexpected end of input"),
+                },
                 _ => break,
             }
         }
-        Token::Number
+        match s.parse::<f64>() {
+            Ok(n) => Token::NumberValue(n),
+            Err(_) => panic!("Unexpected number: {}", s),
+        }
     }
 
     pub fn consume_keyword(&mut self) -> Token {
@@ -194,9 +199,9 @@ mod tests {
         let input = r#"{"foo":"bar"}"#;
         let mut tokenizer = Tokenizer::new(input);
         assert_eq!(tokenizer.consume_char(), Token::LBrace); // {
-        assert_eq!(tokenizer.consume_string(), Token::String); // "foo"
+        assert_eq!(tokenizer.consume_string(), Token::StringValue("foo".to_string())); // "foo"
         assert_eq!(tokenizer.consume_char(), Token::Colon); // :
-        assert_eq!(tokenizer.consume_string(), Token::String); // "bar"
+        assert_eq!(tokenizer.consume_string(), Token::StringValue("bar".to_string())); // "bar"
         assert_eq!(tokenizer.consume_char(), Token::RBrace); // }
     }
 
@@ -205,9 +210,9 @@ mod tests {
         let input = r#"{"foo":123}"#;
         let mut tokenizer = Tokenizer::new(input);
         assert_eq!(tokenizer.consume_char(), Token::LBrace); // {
-        assert_eq!(tokenizer.consume_string(), Token::String); // "foo"
+        assert_eq!(tokenizer.consume_string(), Token::StringValue("foo".to_string())); // "foo"
         assert_eq!(tokenizer.consume_char(), Token::Colon); // :
-        assert_eq!(tokenizer.consume_number(), Token::Number); // 123
+        assert_eq!(tokenizer.consume_number(), Token::NumberValue(123.0)); // 123
         assert_eq!(tokenizer.consume_char(), Token::RBrace); // }
     }
 
@@ -216,17 +221,17 @@ mod tests {
         let input = r#"{"foo":true,"bar":false,"baz":null}"#;
         let mut tokenizer = Tokenizer::new(input);
         assert_eq!(tokenizer.consume_char(), Token::LBrace); // {
-        assert_eq!(tokenizer.consume_string(), Token::String); // "foo"
+        assert_eq!(tokenizer.consume_string(), Token::StringValue("foo".to_string())); // "foo"
         assert_eq!(tokenizer.consume_char(), Token::Colon); // :
-        assert_eq!(tokenizer.consume_keyword(), Token::True); // true
+        assert_eq!(tokenizer.consume_keyword(), Token::BooleanValue(true)); // true
         assert_eq!(tokenizer.consume_char(), Token::Comma); // ,
-        assert_eq!(tokenizer.consume_string(), Token::String); // "bar"
+        assert_eq!(tokenizer.consume_string(), Token::StringValue("bar".to_string())); // "bar"
         assert_eq!(tokenizer.consume_char(), Token::Colon); // :
-        assert_eq!(tokenizer.consume_keyword(), Token::False); // false
+        assert_eq!(tokenizer.consume_keyword(), Token::BooleanValue(false)); // false
         assert_eq!(tokenizer.consume_char(), Token::Comma); // ,
-        assert_eq!(tokenizer.consume_string(), Token::String); // "baz"
+        assert_eq!(tokenizer.consume_string(), Token::StringValue("baz".to_string())); // "baz"
         assert_eq!(tokenizer.consume_char(), Token::Colon); // :
-        assert_eq!(tokenizer.consume_keyword(), Token::Null); // null
+        assert_eq!(tokenizer.consume_keyword(), Token::NullValue); // null
         assert_eq!(tokenizer.consume_char(), Token::RBrace); // }
     }
 
@@ -237,10 +242,10 @@ mod tests {
         let mut tokenizer = Tokenizer::new(input);
         assert_eq!(tokenizer.consume_char(), Token::LBrace); // {
         tokenizer.consume_whitespace(); // tab whitespace
-        assert_eq!(tokenizer.consume_string(), Token::String); // "foo"
+        assert_eq!(tokenizer.consume_string(), Token::StringValue("foo".to_string())); // "foo"
         assert_eq!(tokenizer.consume_char(), Token::Colon); // :
         tokenizer.consume_whitespace(); // space whitespace
-        assert_eq!(tokenizer.consume_number(), Token::Number); // 123
+        assert_eq!(tokenizer.consume_number(), Token::NumberValue(123.0)); // 123
         tokenizer.consume_whitespace(); // new line whitespace
         assert_eq!(tokenizer.consume_char(), Token::RBrace); // }
     }
@@ -250,9 +255,9 @@ mod tests {
         let input = r#"{"foo":123}"#;
         let mut tokenizer = Tokenizer::new(input);
         assert_eq!(tokenizer.next_token(), Token::LBrace); // {
-        assert_eq!(tokenizer.next_token(), Token::String); // "foo"
+        assert_eq!(tokenizer.next_token(), Token::StringValue("foo".to_string())); // "foo"
         assert_eq!(tokenizer.next_token(), Token::Colon); // :
-        assert_eq!(tokenizer.next_token(), Token::Number); // 123
+        assert_eq!(tokenizer.next_token(), Token::NumberValue(123.0)); // 123
         assert_eq!(tokenizer.next_token(), Token::RBrace); // }
         assert_eq!(tokenizer.next_token(), Token::End); // end
     }
@@ -262,12 +267,12 @@ mod tests {
         let input = r#"{"foo":123}"#;
         let mut tokenizer = Tokenizer::new(input);
         let tests: Vec<Token> = vec![
-            Token::LBrace, // {
-            Token::String, // "foo"
-            Token::Colon, // :
-            Token::Number, // 123
-            Token::RBrace, // }
-            Token::End, // end
+            Token::LBrace,                    // {
+            Token::StringValue("foo".to_string()), // "foo"
+            Token::Colon,                     // :
+            Token::NumberValue(123.0),             // 123
+            Token::RBrace,                    // }
+            Token::End,                       // end
         ];
 
         for test in tests {
