@@ -3,6 +3,13 @@
 version = 3
 
 [[package]]
+name = "formatter"
+version = "0.1.0"
+dependencies = [
+ "json-parser",
+]
+
+[[package]]
 name = "json-parser"
 version = "0.1.0"
 dependencies = [
