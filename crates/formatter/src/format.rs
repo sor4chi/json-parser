@@ -4,7 +4,6 @@ struct FormatOptions {
     spaces: usize,
     use_tabs: bool,
     trailing_commas: bool,
-    print_width: usize,
 }
 
 impl Default for FormatOptions {
@@ -13,7 +12,6 @@ impl Default for FormatOptions {
             spaces: 4,
             use_tabs: false,
             trailing_commas: false,
-            print_width: 80,
         }
     }
 }
