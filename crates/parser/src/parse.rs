@@ -68,7 +68,7 @@ impl Parser {
             Ok(value) => Ok(Node::new(
                 SyntaxKind::PropertyAssignment,
                 vec![
-                    Node::new(SyntaxKind::StringLiteral(property_name), vec![]),
+                    Node::new(SyntaxKind::Identifier(property_name), vec![]),
                     value,
                 ],
             )),
@@ -198,7 +198,7 @@ mod tests {
                 Ok(Node::new(
                     SyntaxKind::PropertyAssignment,
                     vec![
-                        Node::new(SyntaxKind::StringLiteral("hello".to_string()), vec![]),
+                        Node::new(SyntaxKind::Identifier("hello".to_string()), vec![]),
                         Node::new(SyntaxKind::NumberLiteral(123.0), vec![]),
                     ],
                 )),
@@ -225,7 +225,7 @@ mod tests {
                     vec![Node::new(
                         SyntaxKind::PropertyAssignment,
                         vec![
-                            Node::new(SyntaxKind::StringLiteral("hello".to_string()), vec![]),
+                            Node::new(SyntaxKind::Identifier("hello".to_string()), vec![]),
                             Node::new(SyntaxKind::NumberLiteral(123.0), vec![]),
                         ],
                     )],
@@ -239,14 +239,14 @@ mod tests {
                         Node::new(
                             SyntaxKind::PropertyAssignment,
                             vec![
-                                Node::new(SyntaxKind::StringLiteral("hello".to_string()), vec![]),
+                                Node::new(SyntaxKind::Identifier("hello".to_string()), vec![]),
                                 Node::new(SyntaxKind::NumberLiteral(123.0), vec![]),
                             ],
                         ),
                         Node::new(
                             SyntaxKind::PropertyAssignment,
                             vec![
-                                Node::new(SyntaxKind::StringLiteral("world".to_string()), vec![]),
+                                Node::new(SyntaxKind::Identifier("world".to_string()), vec![]),
                                 Node::new(SyntaxKind::StringLiteral("hello".to_string()), vec![]),
                             ],
                         ),
@@ -313,7 +313,7 @@ mod tests {
                     vec![Node::new(
                         SyntaxKind::PropertyAssignment,
                         vec![
-                            Node::new(SyntaxKind::StringLiteral("hello".to_string()), vec![]),
+                            Node::new(SyntaxKind::Identifier("hello".to_string()), vec![]),
                             Node::new(SyntaxKind::NumberLiteral(123.0), vec![]),
                         ],
                     )],
@@ -353,7 +353,7 @@ mod tests {
                     vec![Node::new(
                         SyntaxKind::PropertyAssignment,
                         vec![
-                            Node::new(SyntaxKind::StringLiteral("hello".to_string()), vec![]),
+                            Node::new(SyntaxKind::Identifier("hello".to_string()), vec![]),
                             Node::new(SyntaxKind::NumberLiteral(123.0), vec![]),
                         ],
                     )],
@@ -377,7 +377,7 @@ mod tests {
                     vec![Node::new(
                         SyntaxKind::PropertyAssignment,
                         vec![
-                            Node::new(SyntaxKind::StringLiteral("hello".to_string()), vec![]),
+                            Node::new(SyntaxKind::Identifier("hello".to_string()), vec![]),
                             Node::new(
                                 SyntaxKind::ArrayLiteralExpression,
                                 vec![

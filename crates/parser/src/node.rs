@@ -7,6 +7,7 @@ pub enum SyntaxKind {
     FalseKeyword,
     NullKeyword,
     PropertyAssignment,
+    Identifier(String),
     ObjectLiteralExpression,
     ArrayLiteralExpression,
     End,
@@ -35,7 +36,6 @@ impl Node {
     }
 }
 
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -44,47 +44,26 @@ mod tests {
     fn test_text() {
         let cases = vec![
             (
-                Node::new(
-                    SyntaxKind::StringLiteral("hello".to_string()),
-                    vec![],
-                ),
+                Node::new(SyntaxKind::StringLiteral("hello".to_string()), vec![]),
                 Some("hello".to_string()),
             ),
             (
-                Node::new(
-                    SyntaxKind::NumberLiteral(42.0),
-                    vec![],
-                ),
+                Node::new(SyntaxKind::NumberLiteral(42.0), vec![]),
                 Some("42".to_string()),
             ),
             (
-                Node::new(
-                    SyntaxKind::TrueKeyword,
-                    vec![],
-                ),
+                Node::new(SyntaxKind::TrueKeyword, vec![]),
                 Some("true".to_string()),
             ),
             (
-                Node::new(
-                    SyntaxKind::FalseKeyword,
-                    vec![],
-                ),
+                Node::new(SyntaxKind::FalseKeyword, vec![]),
                 Some("false".to_string()),
             ),
             (
-                Node::new(
-                    SyntaxKind::NullKeyword,
-                    vec![],
-                ),
+                Node::new(SyntaxKind::NullKeyword, vec![]),
                 Some("null".to_string()),
             ),
-            (
-                Node::new(
-                    SyntaxKind::PropertyAssignment,
-                    vec![],
-                ),
-                None,
-            ),
+            (Node::new(SyntaxKind::PropertyAssignment, vec![]), None),
         ];
 
         for (node, expected) in cases {
