@@ -24,14 +24,14 @@ impl Parser {
         self.token_stream.next()
     }
 
-    pub fn consume_token(&mut self) -> Token {
+    fn consume_token(&mut self) -> Token {
         match self.next_token() {
             Some(token) => token,
             None => panic!("Unexpected token of input"),
         }
     }
 
-    pub fn consume_string(&mut self) -> Node {
+    fn consume_string(&mut self) -> Node {
         let token = self.consume_token();
         match token {
             Token::StringValue(value) => Node::new(SyntaxKind::StringLiteral(value), vec![]),
@@ -39,7 +39,7 @@ impl Parser {
         }
     }
 
-    pub fn consume_number(&mut self) -> Node {
+    fn consume_number(&mut self) -> Node {
         let token = self.consume_token();
         match token {
             Token::NumberValue(value) => Node::new(SyntaxKind::NumberLiteral(value), vec![]),
@@ -47,7 +47,7 @@ impl Parser {
         }
     }
 
-    pub fn consume_keyword(&mut self) -> Node {
+    fn consume_keyword(&mut self) -> Node {
         let token = self.consume_token();
         match token {
             Token::BooleanValue(true) => Node::new(SyntaxKind::TrueKeyword, vec![]),
@@ -57,7 +57,7 @@ impl Parser {
         }
     }
 
-    pub fn consume_property_assignment(&mut self) -> Result<Node, String> {
+    fn consume_property_assignment(&mut self) -> Result<Node, String> {
         let property_name = match self.peek_token() {
             Some(Token::StringValue(s)) => s.clone(),
             _ => return Err("Unexpected token of input".to_string()),
@@ -76,7 +76,7 @@ impl Parser {
         }
     }
 
-    pub fn consume_object(&mut self) -> Result<Node, String> {
+    fn consume_object(&mut self) -> Result<Node, String> {
         let mut property_assignments = Vec::new();
         self.consume_token();
         loop {
@@ -103,7 +103,7 @@ impl Parser {
         ))
     }
 
-    pub fn consume_array(&mut self) -> Result<Node, String> {
+    fn consume_array(&mut self) -> Result<Node, String> {
         let mut elements = Vec::new();
         self.consume_token();
         loop {
@@ -132,7 +132,7 @@ impl Parser {
         Ok(Node::new(SyntaxKind::ArrayLiteralExpression, elements))
     }
 
-    pub fn consume_value(&mut self) -> Result<Node, String> {
+    fn consume_value(&mut self) -> Result<Node, String> {
         match self.peek_token() {
             Some(Token::StringValue(_)) => Ok(self.consume_string()),
             Some(Token::NumberValue(_)) => Ok(self.consume_number()),

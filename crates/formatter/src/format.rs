@@ -1,4 +1,7 @@
-use json_parser::node::{Node, SyntaxKind};
+use json_parser::{
+    node::{Node, SyntaxKind},
+    parse::Parser,
+};
 
 struct FormatOptions {
     spaces: usize,
@@ -22,7 +25,7 @@ struct Formatter {
 }
 
 impl Formatter {
-    fn new(_options: Option<FormatOptions>) -> Self {
+    pub fn new(_options: Option<FormatOptions>) -> Self {
         Formatter {
             indent: 0,
             options: _options.unwrap_or_default(),
@@ -53,7 +56,9 @@ impl Formatter {
 
     fn format_primitive(&self, node: &Node) -> String {
         match &node.kind {
-            SyntaxKind::StringLiteral(text) => format!("\"{}\"", text),
+            SyntaxKind::StringLiteral(text) | SyntaxKind::Identifier(text) => {
+                format!("\"{}\"", text)
+            }
             SyntaxKind::NumberLiteral(value) => value.to_string(),
             SyntaxKind::TrueKeyword => "true".to_string(),
             SyntaxKind::FalseKeyword => "false".to_string(),
@@ -75,7 +80,7 @@ impl Formatter {
             }
             s.push('\n');
             s.push_str(&self.indent_string());
-            s.push_str(&self.format(child));
+            s.push_str(&self.format_node(child));
         }
         if self.options.trailing_commas {
             s.push(',');
@@ -100,7 +105,7 @@ impl Formatter {
             }
             s.push('\n');
             s.push_str(&self.indent_string());
-            s.push_str(&self.format(child));
+            s.push_str(&self.format_node(child));
         }
         if self.options.trailing_commas {
             s.push(',');
@@ -112,25 +117,32 @@ impl Formatter {
         s
     }
 
-    fn format(&mut self, node: &Node) -> String {
+    fn format_node(&mut self, node: &Node) -> String {
         match &node.kind {
             SyntaxKind::ObjectLiteralExpression => self.format_object(node),
             SyntaxKind::ArrayLiteralExpression => self.format_array(node),
             SyntaxKind::StringLiteral(_)
             | SyntaxKind::NumberLiteral(_)
+            | SyntaxKind::Identifier(_)
             | SyntaxKind::TrueKeyword
             | SyntaxKind::FalseKeyword
             | SyntaxKind::NullKeyword => self.format_primitive(node),
             SyntaxKind::PropertyAssignment => {
                 let mut s = String::new();
-                s.push_str(&self.format(&node.children[0]));
+                s.push_str(&self.format_node(&node.children[0]));
                 s.push(':');
                 s.push(' ');
-                s.push_str(&self.format(&node.children[1]));
+                s.push_str(&self.format_node(&node.children[1]));
                 s
             }
             _ => unreachable!("format called on non-format node, {:?}", node),
         }
+    }
+
+    pub fn format(&mut self, input: &str) -> String {
+        let mut parser = Parser::new(input);
+        let node = parser.parse();
+        self.format_node(&node)
     }
 }
 
@@ -325,7 +337,7 @@ mod tests {
     }
 
     #[test]
-    fn test_format() {
+    fn test_format_node() {
         let cases = vec![
             (
                 Node::new(
@@ -374,7 +386,34 @@ mod tests {
 
         for (node, expected) in cases {
             let mut formatter = Formatter::new(None);
-            assert_eq!(formatter.format(&node), expected);
+            assert_eq!(formatter.format_node(&node), expected);
+        }
+    }
+
+    #[test]
+    fn test_format() {
+        let cases = vec![
+            (
+                r#"{"hello": "world"}"#,
+                "{\n    \"hello\": \"world\"\n}".to_string(),
+            ),
+            (
+                r#"[1, 2, 3]"#,
+                "[\n    1,\n    2,\n    3\n]".to_string(),
+            ),
+            (
+                r#"{"hello": {"foo": 42}, "world": ["bar", 42]}"#,
+                "{\n    \"hello\": {\n        \"foo\": 42\n    },\n    \"world\": [\n        \"bar\",\n        42\n    ]\n}".to_string(),
+            ),
+            (
+                r#"[{"hello": "world"}, {"foo": "bar"}]"#,
+                "[\n    {\n        \"hello\": \"world\"\n    },\n    {\n        \"foo\": \"bar\"\n    }\n]".to_string(),
+            )
+        ];
+
+        for (input, expected) in cases {
+            let mut formatter = Formatter::new(None);
+            assert_eq!(formatter.format(&input), expected);
         }
     }
 }
