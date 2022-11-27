@@ -48,7 +48,7 @@ impl Parser {
         let token = self.consume_token();
         match token {
             Token::StringValue(value) => SyntaxKind::StringLiteral(value),
-            _ => panic!("Unexpected token of input"),
+            _ => unreachable!(),
         }
     }
 
@@ -56,7 +56,7 @@ impl Parser {
         let token = self.consume_token();
         match token {
             Token::NumberValue(value) => SyntaxKind::NumberLiteral(value),
-            _ => panic!("Unexpected token of input"),
+            _ => unreachable!(),
         }
     }
 
@@ -66,22 +66,27 @@ impl Parser {
             Token::BooleanValue(true) => SyntaxKind::TrueKeyword,
             Token::BooleanValue(false) => SyntaxKind::FalseKeyword,
             Token::NullValue => SyntaxKind::NullKeyword,
-            _ => panic!("Unexpected token of input"),
+            _ => unreachable!("Unexpected token of input"),
         }
     }
 
-    pub fn consume_property_assignment(&mut self) -> SyntaxKind {
+    pub fn consume_property_assignment(&mut self) -> Result<SyntaxKind, String> {
         let property_name = match self.peek_token() {
             Some(Token::StringValue(s)) => s.clone(),
-            _ => panic!("Unexpected token of input"),
+            _ => return Err("Unexpected token of input".to_string()),
         };
         self.consume_token();
         self.consume_token();
-        let value = self.parse_value();
-        SyntaxKind::PropertyAssignment(property_name, Box::new(value))
+        match self.consume_value() {
+            Ok(value) => Ok(SyntaxKind::PropertyAssignment(
+                property_name,
+                Box::new(value),
+            )),
+            Err(e) => Err(e),
+        }
     }
 
-    pub fn consume_object(&mut self) -> SyntaxKind {
+    pub fn consume_object(&mut self) -> Result<SyntaxKind, String> {
         let mut property_assignments = Vec::new();
         self.consume_token();
         loop {
@@ -90,20 +95,22 @@ impl Parser {
                     self.consume_token();
                     break;
                 }
-                Some(Token::StringValue(_)) => {
-                    let property_assignment = self.consume_property_assignment();
-                    property_assignments.push(property_assignment);
-                }
+                Some(Token::StringValue(_)) => match self.consume_property_assignment() {
+                    Ok(property_assignment) => {
+                        property_assignments.push(property_assignment);
+                    }
+                    Err(e) => return Err(e),
+                },
                 Some(Token::Comma) => {
                     self.consume_token();
                 }
-                _ => panic!("Unexpected token of input"),
+                _ => return Err("Unexpected token of input".to_string()),
             }
         }
-        SyntaxKind::ObjectLiteralExpression(property_assignments)
+        Ok(SyntaxKind::ObjectLiteralExpression(property_assignments))
     }
 
-    pub fn consume_array(&mut self) -> SyntaxKind {
+    pub fn consume_array(&mut self) -> Result<SyntaxKind, String> {
         let mut elements = Vec::new();
         self.consume_token();
         loop {
@@ -117,36 +124,42 @@ impl Parser {
                 | Some(Token::BooleanValue(_))
                 | Some(Token::NullValue)
                 | Some(Token::LBrace)
-                | Some(Token::LBracket) => {
-                    let value = self.parse_value();
-                    elements.push(value);
-                }
+                | Some(Token::LBracket) => match self.consume_value() {
+                    Ok(value) => {
+                        elements.push(value);
+                    }
+                    Err(e) => return Err(e),
+                },
                 Some(Token::Comma) => {
                     self.consume_token();
                 }
-                _ => panic!("Unexpected token of input"),
+                _ => return Err("Unexpected token of input".to_string()),
             }
         }
-        SyntaxKind::ArrayLiteralExpression(elements)
+        Ok(SyntaxKind::ArrayLiteralExpression(elements))
     }
 
-    pub fn parse_value(&mut self) -> SyntaxKind {
+    pub fn consume_value(&mut self) -> Result<SyntaxKind, String> {
         match self.peek_token() {
-            Some(Token::StringValue(_)) => self.consume_string(),
-            Some(Token::NumberValue(_)) => self.consume_number(),
-            Some(Token::BooleanValue(_)) | Some(Token::NullValue) => self.consume_keyword(),
+            Some(Token::StringValue(_)) => Ok(self.consume_string()),
+            Some(Token::NumberValue(_)) => Ok(self.consume_number()),
+            Some(Token::BooleanValue(_)) | Some(Token::NullValue) => Ok(self.consume_keyword()),
             Some(Token::LBrace) => self.consume_object(),
             Some(Token::LBracket) => self.consume_array(),
-            _ => panic!("Unexpected token of input"),
+            _ => Err("Unexpected token of input".to_string()),
         }
     }
 
     pub fn parse(&mut self) -> SyntaxKind {
         let first_token = self.peek_token();
-        match first_token {
+        let result = match first_token {
             Some(Token::LBrace) => self.consume_object(),
             Some(Token::LBracket) => self.consume_array(),
-            _ => panic!("Unexpected the first token of input"),
+            _ => Err("Unexpected the first token of input".to_string()),
+        };
+        match result {
+            Ok(value) => value,
+            Err(e) => panic!("{}", e),
         }
     }
 }
@@ -156,7 +169,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_parse_string() {
+    fn test_consume_string() {
         let mut parser = Parser::new(r#""hello""#);
         assert_eq!(
             parser.next_token(),
@@ -165,13 +178,13 @@ mod tests {
     }
 
     #[test]
-    fn test_parse_number() {
+    fn test_consume_number() {
         let mut parser = Parser::new("123");
         assert_eq!(parser.next_token(), Some(Token::NumberValue(123.0)));
     }
 
     #[test]
-    fn test_parse_keyword() {
+    fn test_consume_keyword() {
         let cases = vec![
             ("true", Token::BooleanValue(true)),
             ("false", Token::BooleanValue(false)),
@@ -185,49 +198,30 @@ mod tests {
     }
 
     #[test]
-    fn test_parse_property_assignment() {
-        let mut parser = Parser::new(r#""hello": 123"#);
-        assert_eq!(
-            parser.next_token(),
-            Some(Token::StringValue("hello".to_string()))
-        );
-        assert_eq!(parser.next_token(), Some(Token::Colon));
-        assert_eq!(parser.next_token(), Some(Token::NumberValue(123.0)));
+    fn test_consume_property_assignment() {
+        let success_cases = vec![
+            (
+                r#""hello": 123"#,
+                Ok(SyntaxKind::PropertyAssignment(
+                    "hello".to_string(),
+                    Box::new(SyntaxKind::NumberLiteral(123.0)),
+                )),
+            ),
+            (
+                r#"123: "hello""#,
+                Err("Unexpected token of input".to_string()),
+            ),
+        ];
+
+        for (input, expected) in success_cases {
+            let mut parser = Parser::new(input);
+            assert_eq!(parser.consume_property_assignment(), expected);
+        }
     }
 
     #[test]
-    fn test_parse_object() {
-        let mut parser = Parser::new(r#"{"hello": 123}"#);
-        assert_eq!(parser.next_token(), Some(Token::LBrace));
-        assert_eq!(
-            parser.next_token(),
-            Some(Token::StringValue("hello".to_string()))
-        );
-        assert_eq!(parser.next_token(), Some(Token::Colon));
-        assert_eq!(parser.next_token(), Some(Token::NumberValue(123.0)));
-        assert_eq!(parser.next_token(), Some(Token::RBrace));
-    }
-
-    #[test]
-    fn test_parse_array() {
-        let mut parser = Parser::new(r#"[1, 2, 3]"#);
-        assert_eq!(parser.next_token(), Some(Token::LBracket));
-        assert_eq!(parser.next_token(), Some(Token::NumberValue(1.0)));
-        assert_eq!(parser.next_token(), Some(Token::Comma));
-        assert_eq!(parser.next_token(), Some(Token::NumberValue(2.0)));
-        assert_eq!(parser.next_token(), Some(Token::Comma));
-        assert_eq!(parser.next_token(), Some(Token::NumberValue(3.0)));
-        assert_eq!(parser.next_token(), Some(Token::RBracket));
-    }
-
-    #[test]
-    fn test_parse_value() {
+    fn test_consume_object() {
         let cases = vec![
-            ("123", SyntaxKind::NumberLiteral(123.0)),
-            (r#""hello""#, SyntaxKind::StringLiteral("hello".to_string())),
-            ("true", SyntaxKind::TrueKeyword),
-            ("false", SyntaxKind::FalseKeyword),
-            ("null", SyntaxKind::NullKeyword),
             (
                 r#"{"hello": 123}"#,
                 SyntaxKind::ObjectLiteralExpression(vec![SyntaxKind::PropertyAssignment(
@@ -236,18 +230,86 @@ mod tests {
                 )]),
             ),
             (
-                r#"[1, 2, 3]"#,
-                SyntaxKind::ArrayLiteralExpression(vec![
-                    SyntaxKind::NumberLiteral(1.0),
-                    SyntaxKind::NumberLiteral(2.0),
-                    SyntaxKind::NumberLiteral(3.0),
+                r#"{"hello": 123, "world": "hello"}"#,
+                SyntaxKind::ObjectLiteralExpression(vec![
+                    SyntaxKind::PropertyAssignment(
+                        "hello".to_string(),
+                        Box::new(SyntaxKind::NumberLiteral(123.0)),
+                    ),
+                    SyntaxKind::PropertyAssignment(
+                        "world".to_string(),
+                        Box::new(SyntaxKind::StringLiteral("hello".to_string())),
+                    ),
                 ]),
             ),
         ];
 
         for (input, expected) in cases {
             let mut parser = Parser::new(input);
-            assert_eq!(parser.parse_value(), expected);
+            assert_eq!(parser.parse(), expected);
+        }
+    }
+
+    #[test]
+    fn test_consume_array() {
+        let cases = vec![
+            (
+                r#"[123]"#,
+                SyntaxKind::ArrayLiteralExpression(vec![SyntaxKind::NumberLiteral(123.0)]),
+            ),
+            (
+                r#"[123, "hello"]"#,
+                SyntaxKind::ArrayLiteralExpression(vec![
+                    SyntaxKind::NumberLiteral(123.0),
+                    SyntaxKind::StringLiteral("hello".to_string()),
+                ]),
+            ),
+        ];
+
+        for (input, expected) in cases {
+            let mut parser = Parser::new(input);
+            assert_eq!(parser.parse(), expected);
+        }
+    }
+
+    #[test]
+    fn test_consume_value() {
+        let cases = vec![
+            ("123", Ok(SyntaxKind::NumberLiteral(123.0))),
+            (
+                r#""hello""#,
+                Ok(SyntaxKind::StringLiteral("hello".to_string())),
+            ),
+            ("true", Ok(SyntaxKind::TrueKeyword)),
+            ("false", Ok(SyntaxKind::FalseKeyword)),
+            ("null", Ok(SyntaxKind::NullKeyword)),
+            (
+                r#"{"hello": 123}"#,
+                Ok(SyntaxKind::ObjectLiteralExpression(vec![
+                    SyntaxKind::PropertyAssignment(
+                        "hello".to_string(),
+                        Box::new(SyntaxKind::NumberLiteral(123.0)),
+                    ),
+                ])),
+            ),
+            (
+                r#"[1, 2, 3]"#,
+                Ok(SyntaxKind::ArrayLiteralExpression(vec![
+                    SyntaxKind::NumberLiteral(1.0),
+                    SyntaxKind::NumberLiteral(2.0),
+                    SyntaxKind::NumberLiteral(3.0),
+                ])),
+            ),
+            ("", Err("Unexpected token of input".to_string())),
+            (
+                r#"{"hello": 123"#,
+                Err("Unexpected token of input".to_string()),
+            ),
+        ];
+
+        for (input, expected) in cases {
+            let mut parser = Parser::new(input);
+            assert_eq!(parser.consume_value(), expected);
         }
     }
 
