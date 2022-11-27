@@ -1,8 +1,6 @@
 use phf::phf_map;
-use std::iter::Peekable;
-use std::vec::IntoIter;
 
-pub type PeekableIter<T> = Peekable<IntoIter<T>>;
+use crate::utility::PeekableIter;
 
 #[derive(Debug, PartialEq, PartialOrd, Clone)]
 pub enum Token {
