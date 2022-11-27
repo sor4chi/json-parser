@@ -11,7 +11,7 @@ pub enum SyntaxKind {
     TrueKeyword,
     FalseKeyword,
     NullKeyword,
-    PropertyAssignment(String),
+    PropertyAssignment,
     ObjectLiteralExpression,
     ArrayLiteralExpression,
     End,
@@ -91,8 +91,11 @@ impl Parser {
         self.consume_token();
         match self.consume_value() {
             Ok(value) => Ok(Node::new(
-                SyntaxKind::PropertyAssignment(property_name),
-                vec![value],
+                SyntaxKind::PropertyAssignment,
+                vec![
+                    Node::new(SyntaxKind::StringLiteral(property_name), vec![]),
+                    value,
+                ],
             )),
             Err(e) => Err(e),
         }
@@ -218,8 +221,11 @@ mod tests {
             (
                 r#""hello": 123"#,
                 Ok(Node::new(
-                    SyntaxKind::PropertyAssignment("hello".to_string()),
-                    vec![Node::new(SyntaxKind::NumberLiteral(123.0), vec![])],
+                    SyntaxKind::PropertyAssignment,
+                    vec![
+                        Node::new(SyntaxKind::StringLiteral("hello".to_string()), vec![]),
+                        Node::new(SyntaxKind::NumberLiteral(123.0), vec![]),
+                    ],
                 )),
             ),
             (
@@ -242,8 +248,11 @@ mod tests {
                 Node::new(
                     SyntaxKind::ObjectLiteralExpression,
                     vec![Node::new(
-                        SyntaxKind::PropertyAssignment("hello".to_string()),
-                        vec![Node::new(SyntaxKind::NumberLiteral(123.0), vec![])],
+                        SyntaxKind::PropertyAssignment,
+                        vec![
+                            Node::new(SyntaxKind::StringLiteral("hello".to_string()), vec![]),
+                            Node::new(SyntaxKind::NumberLiteral(123.0), vec![]),
+                        ],
                     )],
                 ),
             ),
@@ -253,15 +262,18 @@ mod tests {
                     SyntaxKind::ObjectLiteralExpression,
                     vec![
                         Node::new(
-                            SyntaxKind::PropertyAssignment("hello".to_string()),
-                            vec![Node::new(SyntaxKind::NumberLiteral(123.0), vec![])],
+                            SyntaxKind::PropertyAssignment,
+                            vec![
+                                Node::new(SyntaxKind::StringLiteral("hello".to_string()), vec![]),
+                                Node::new(SyntaxKind::NumberLiteral(123.0), vec![]),
+                            ],
                         ),
                         Node::new(
-                            SyntaxKind::PropertyAssignment("world".to_string()),
-                            vec![Node::new(
-                                SyntaxKind::StringLiteral("hello".to_string()),
-                                vec![],
-                            )],
+                            SyntaxKind::PropertyAssignment,
+                            vec![
+                                Node::new(SyntaxKind::StringLiteral("world".to_string()), vec![]),
+                                Node::new(SyntaxKind::StringLiteral("hello".to_string()), vec![]),
+                            ],
                         ),
                     ],
                 ),
@@ -324,8 +336,11 @@ mod tests {
                 Ok(Node::new(
                     SyntaxKind::ObjectLiteralExpression,
                     vec![Node::new(
-                        SyntaxKind::PropertyAssignment("hello".to_string()),
-                        vec![Node::new(SyntaxKind::NumberLiteral(123.0), vec![])],
+                        SyntaxKind::PropertyAssignment,
+                        vec![
+                            Node::new(SyntaxKind::StringLiteral("hello".to_string()), vec![]),
+                            Node::new(SyntaxKind::NumberLiteral(123.0), vec![]),
+                        ],
                     )],
                 )),
             ),
@@ -361,8 +376,11 @@ mod tests {
                 Node::new(
                     SyntaxKind::ObjectLiteralExpression,
                     vec![Node::new(
-                        SyntaxKind::PropertyAssignment("hello".to_string()),
-                        vec![Node::new(SyntaxKind::NumberLiteral(123.0), vec![])],
+                        SyntaxKind::PropertyAssignment,
+                        vec![
+                            Node::new(SyntaxKind::StringLiteral("hello".to_string()), vec![]),
+                            Node::new(SyntaxKind::NumberLiteral(123.0), vec![]),
+                        ],
                     )],
                 ),
             ),
@@ -382,15 +400,18 @@ mod tests {
                 Node::new(
                     SyntaxKind::ObjectLiteralExpression,
                     vec![Node::new(
-                        SyntaxKind::PropertyAssignment("hello".to_string()),
-                        vec![Node::new(
-                            SyntaxKind::ArrayLiteralExpression,
-                            vec![
-                                Node::new(SyntaxKind::NumberLiteral(1.0), vec![]),
-                                Node::new(SyntaxKind::NumberLiteral(2.0), vec![]),
-                                Node::new(SyntaxKind::NumberLiteral(3.0), vec![]),
-                            ],
-                        )],
+                        SyntaxKind::PropertyAssignment,
+                        vec![
+                            Node::new(SyntaxKind::StringLiteral("hello".to_string()), vec![]),
+                            Node::new(
+                                SyntaxKind::ArrayLiteralExpression,
+                                vec![
+                                    Node::new(SyntaxKind::NumberLiteral(1.0), vec![]),
+                                    Node::new(SyntaxKind::NumberLiteral(2.0), vec![]),
+                                    Node::new(SyntaxKind::NumberLiteral(3.0), vec![]),
+                                ],
+                            ),
+                        ],
                     )],
                 ),
             ),
