@@ -18,8 +18,8 @@ make build
 ## Run Formatter
 
 ```bash
-./format_json test.json // default
-./format_json test.json --tabs // use tabs for indent
-./format_json test.json --spaces 2 // use 2 spaces for indent, default is 4
-./format_json test.json --trailing_commas // use trailing comma for object and array
+./format_json test.json # default
+./format_json test.json --tabs # use tabs for indent
+./format_json test.json --spaces 2 # use 2 spaces for indent, default is 4
+./format_json test.json --trailing_commas # use trailing comma for object and array
 ```
