@@ -3,10 +3,10 @@ use json_parser::{
     parse::Parser,
 };
 
-struct FormatOptions {
-    spaces: usize,
-    use_tabs: bool,
-    trailing_commas: bool,
+pub struct FormatOptions {
+    pub spaces: usize,
+    pub use_tabs: bool,
+    pub trailing_commas: bool,
 }
 
 impl Default for FormatOptions {
@@ -19,7 +19,7 @@ impl Default for FormatOptions {
     }
 }
 
-struct Formatter {
+pub struct Formatter {
     indent: usize,
     options: FormatOptions,
 }

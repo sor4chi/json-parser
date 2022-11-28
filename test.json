@@ -1,0 +1,30 @@
+{
+  "number": 1,
+  "float": 1.1,
+  "string": "string",
+  "boolean": true,
+  "null": null,
+  "array": [
+    1,
+    2,
+    3
+  ],
+  "object": {
+    "a": "b",
+    "c": "d",
+    "e": "f"
+  },
+  "nested": {
+    "array": [
+      {
+        "a": "b"
+      },
+      {
+        "c": "d"
+      },
+      {
+        "e": "f"
+      }
+    ]
+  }
+}
