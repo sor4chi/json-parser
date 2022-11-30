@@ -60,10 +60,10 @@ impl Parser {
     fn consume_property_assignment(&mut self) -> Result<Node, String> {
         let property_name = match self.peek_token() {
             Some(Token::StringValue(s)) => s.clone(),
-            _ => return Err("Unexpected token of input".to_string()),
+            _ => return Err("Unexpected Identifier".to_string()),
         };
-        self.consume_token();
-        self.consume_token();
+        self.consume_token(); // consume property name
+        self.consume_token(); // consume colon
         match self.consume_value() {
             Ok(value) => Ok(Node::new(
                 SyntaxKind::PropertyAssignment,
@@ -78,17 +78,15 @@ impl Parser {
 
     fn consume_object(&mut self) -> Result<Node, String> {
         let mut property_assignments = Vec::new();
-        self.consume_token();
+        self.consume_token(); // consume "{" LBrace
         loop {
             match self.peek_token() {
                 Some(Token::RBrace) => {
-                    self.consume_token();
+                    self.consume_token(); // consume "}" RBrace
                     break;
                 }
                 Some(Token::StringValue(_)) => match self.consume_property_assignment() {
-                    Ok(property_assignment) => {
-                        property_assignments.push(property_assignment);
-                    }
+                    Ok(property_assignment) => property_assignments.push(property_assignment),
                     Err(e) => return Err(e),
                 },
                 Some(Token::Comma) => {
@@ -105,28 +103,20 @@ impl Parser {
 
     fn consume_array(&mut self) -> Result<Node, String> {
         let mut elements = Vec::new();
-        self.consume_token();
+        self.consume_token(); // consume "[" LBracket
         loop {
             match self.peek_token() {
                 Some(Token::RBracket) => {
-                    self.consume_token();
+                    self.consume_token(); // consume "]" RBracket
                     break;
                 }
-                Some(Token::StringValue(_))
-                | Some(Token::NumberValue(_))
-                | Some(Token::BooleanValue(_))
-                | Some(Token::NullValue)
-                | Some(Token::LBrace)
-                | Some(Token::LBracket) => match self.consume_value() {
-                    Ok(value) => {
-                        elements.push(value);
-                    }
-                    Err(e) => return Err(e),
-                },
                 Some(Token::Comma) => {
                     self.consume_token();
                 }
-                _ => return Err("Unexpected token of input".to_string()),
+                _ => match self.consume_value() {
+                    Ok(value) => elements.push(value),
+                    Err(e) => return Err(e),
+                },
             }
         }
         Ok(Node::new(SyntaxKind::ArrayLiteralExpression, elements))
@@ -164,16 +154,15 @@ mod tests {
     #[test]
     fn test_consume_string() {
         let mut parser = Parser::new(r#""hello""#);
-        assert_eq!(
-            parser.next_token(),
-            Some(Token::StringValue("hello".to_string()))
-        );
+        let string = parser.consume_string();
+        assert_eq!(string.kind, SyntaxKind::StringLiteral("hello".to_string()));
     }
 
     #[test]
     fn test_consume_number() {
         let mut parser = Parser::new("123");
-        assert_eq!(parser.next_token(), Some(Token::NumberValue(123.0)));
+        let number = parser.consume_number();
+        assert_eq!(number.kind, SyntaxKind::NumberLiteral(123.0));
     }
 
     #[test]
@@ -203,10 +192,7 @@ mod tests {
                     ],
                 )),
             ),
-            (
-                r#"123: "hello""#,
-                Err("Unexpected token of input".to_string()),
-            ),
+            (r#"123: "hello""#, Err("Unexpected Identifier".to_string())),
         ];
 
         for (input, expected) in success_cases {
