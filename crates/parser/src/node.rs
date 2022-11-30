@@ -28,6 +28,7 @@ impl Node {
         match &self.kind {
             SyntaxKind::StringLiteral(text) => Some(text.clone()),
             SyntaxKind::NumberLiteral(value) => Some(value.to_string()),
+            SyntaxKind::Identifier(text) => Some(text.clone()),
             SyntaxKind::TrueKeyword => Some("true".to_string()),
             SyntaxKind::FalseKeyword => Some("false".to_string()),
             SyntaxKind::NullKeyword => Some("null".to_string()),
@@ -44,29 +45,26 @@ mod tests {
     fn test_text() {
         let cases = vec![
             (
-                Node::new(SyntaxKind::StringLiteral("hello".to_string()), vec![]),
-                Some("hello".to_string()),
+                SyntaxKind::StringLiteral("foo".to_string()),
+                Some("foo".to_string()),
             ),
+            (SyntaxKind::NumberLiteral(1.0), Some("1".to_string())),
             (
-                Node::new(SyntaxKind::NumberLiteral(42.0), vec![]),
-                Some("42".to_string()),
+                SyntaxKind::Identifier("foo".to_string()),
+                Some("foo".to_string()),
             ),
-            (
-                Node::new(SyntaxKind::TrueKeyword, vec![]),
-                Some("true".to_string()),
-            ),
-            (
-                Node::new(SyntaxKind::FalseKeyword, vec![]),
-                Some("false".to_string()),
-            ),
-            (
-                Node::new(SyntaxKind::NullKeyword, vec![]),
-                Some("null".to_string()),
-            ),
-            (Node::new(SyntaxKind::PropertyAssignment, vec![]), None),
+            (SyntaxKind::TrueKeyword, Some("true".to_string())),
+            (SyntaxKind::FalseKeyword, Some("false".to_string())),
+            (SyntaxKind::NullKeyword, Some("null".to_string())),
+            (SyntaxKind::SourceFile, None),
+            (SyntaxKind::PropertyAssignment, None),
+            (SyntaxKind::ObjectLiteralExpression, None),
+            (SyntaxKind::ArrayLiteralExpression, None),
+            (SyntaxKind::End, None),
         ];
 
-        for (node, expected) in cases {
+        for (kind, expected) in cases {
+            let node = Node::new(kind, vec![]);
             assert_eq!(node.text(), expected);
         }
     }
