@@ -1,6 +1,7 @@
 use crate::{
+    lexer::Lexer,
     node::{Node, SyntaxKind},
-    token::{Token, Tokenizer},
+    token::Token,
     utility::PeekableIter,
 };
 
@@ -10,8 +11,8 @@ pub struct Parser {
 
 impl Parser {
     pub fn new(input: &str) -> Self {
-        let mut tokenizer = Tokenizer::new(input);
-        let tokens = tokenizer.tokenize();
+        let mut lexer = Lexer::new(input);
+        let tokens = lexer.tokenize();
         let token_stream = tokens.into_iter().peekable();
         Parser { token_stream }
     }
