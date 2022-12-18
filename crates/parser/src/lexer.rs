@@ -14,16 +14,8 @@ impl Lexer {
         Lexer { char_stream }
     }
 
-    fn peek_char(&mut self) -> Option<&char> {
-        self.char_stream.peek()
-    }
-
-    fn next_char(&mut self) -> Option<char> {
-        self.char_stream.next()
-    }
-
     fn consume_char(&mut self) -> Token {
-        match self.next_char() {
+        match self.char_stream.next() {
             Some(c) => match CHAR_TOKENS.get(&c) {
                 Some(token) => token.clone(),
                 None => panic!("Unexpected character: {}", c),
@@ -33,12 +25,12 @@ impl Lexer {
     }
 
     fn consume_string(&mut self) -> Token {
-        if self.peek_char() == Some(&'"') {
-            self.next_char(); // the first "
+        if self.char_stream.peek() == Some(&'"') {
+            self.char_stream.next(); // the first "
         }
         let mut s = String::new();
         loop {
-            match self.next_char() {
+            match self.char_stream.next() {
                 Some('"') => break,
                 Some(c) => s.push(c),
                 None => panic!("Unexpected end of input"),
@@ -50,8 +42,8 @@ impl Lexer {
     fn consume_number(&mut self) -> Token {
         let mut s = String::new();
         loop {
-            match self.peek_char() {
-                Some(c) if c.is_numeric() || c == &'.' => match self.next_char() {
+            match self.char_stream.peek() {
+                Some(c) if c.is_numeric() || c == &'.' => match self.char_stream.next() {
                     Some(c) => s.push(c),
                     None => panic!("Unexpected end of input"),
                 },
@@ -67,11 +59,11 @@ impl Lexer {
     fn consume_keyword(&mut self) -> Token {
         let mut keyword = String::new();
         loop {
-            let c = self.peek_char();
+            let c = self.char_stream.peek();
             match c {
                 Some(c) if c.is_alphanumeric() => {
                     keyword.push(*c);
-                    self.next_char();
+                    self.char_stream.next();
                 }
                 _ => break,
             }
@@ -84,9 +76,9 @@ impl Lexer {
 
     fn consume_whitespace(&mut self) {
         loop {
-            match self.peek_char() {
+            match self.char_stream.peek() {
                 Some(c) if c.is_whitespace() => {
-                    self.next_char();
+                    self.char_stream.next();
                 }
                 _ => break,
             }
@@ -95,7 +87,7 @@ impl Lexer {
 
     fn next_token(&mut self) -> Token {
         self.consume_whitespace();
-        let c = self.peek_char();
+        let c = self.char_stream.peek();
         match c {
             Some(c) => match c {
                 '{' | '}' | '[' | ']' | ':' | ',' => self.consume_char(),
@@ -124,32 +116,6 @@ impl Lexer {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn test_peek_char() {
-        let input = r#"{"foo":123}"#;
-        let mut lexer = Lexer::new(input);
-        assert_eq!(lexer.peek_char(), Some(&'{'));
-        assert_eq!(lexer.peek_char(), Some(&'{'));
-    }
-
-    #[test]
-    fn test_next_char() {
-        let input = r#"{"foo":123}"#;
-        let mut lexer = Lexer::new(input);
-        assert_eq!(lexer.next_char(), Some('{'));
-        assert_eq!(lexer.next_char(), Some('"'));
-        assert_eq!(lexer.next_char(), Some('f'));
-        assert_eq!(lexer.next_char(), Some('o'));
-        assert_eq!(lexer.next_char(), Some('o'));
-        assert_eq!(lexer.next_char(), Some('"'));
-        assert_eq!(lexer.next_char(), Some(':'));
-        assert_eq!(lexer.next_char(), Some('1'));
-        assert_eq!(lexer.next_char(), Some('2'));
-        assert_eq!(lexer.next_char(), Some('3'));
-        assert_eq!(lexer.next_char(), Some('}'));
-        assert_eq!(lexer.next_char(), None);
-    }
 
     #[test]
     fn test_consume_char() {
@@ -245,10 +211,7 @@ mod tests {
         let input = r#"{"foo":123}"#;
         let mut lexer = Lexer::new(input);
         assert_eq!(lexer.next_token(), Token::LBrace); // {
-        assert_eq!(
-            lexer.next_token(),
-            Token::StringValue("foo".to_string())
-        ); // "foo"
+        assert_eq!(lexer.next_token(), Token::StringValue("foo".to_string())); // "foo"
         assert_eq!(lexer.next_token(), Token::Colon); // :
         assert_eq!(lexer.next_token(), Token::NumberValue(123.0)); // 123
         assert_eq!(lexer.next_token(), Token::RBrace); // }
