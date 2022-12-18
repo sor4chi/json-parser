@@ -25,36 +25,32 @@ impl Parser {
         self.token_stream.next()
     }
 
-    fn consume_token(&mut self) -> Token {
-        match self.next_token() {
-            Some(token) => token,
-            None => panic!("Unexpected token of input"),
-        }
-    }
-
     fn consume_string(&mut self) -> Node {
-        let token = self.consume_token();
+        let token = self.next_token();
         match token {
-            Token::StringValue(value) => Node::new(SyntaxKind::StringLiteral(value), vec![]),
-            _ => unreachable!(),
+            Some(Token::StringValue(value)) => Node::new(SyntaxKind::StringLiteral(value), vec![]),
+            Some(illigal_token) => panic!("Unexpected token: {:?}", illigal_token),
+            None => panic!("Unexpected end of input"),
         }
     }
 
     fn consume_number(&mut self) -> Node {
-        let token = self.consume_token();
+        let token = self.next_token();
         match token {
-            Token::NumberValue(value) => Node::new(SyntaxKind::NumberLiteral(value), vec![]),
-            _ => unreachable!(),
+            Some(Token::NumberValue(value)) => Node::new(SyntaxKind::NumberLiteral(value), vec![]),
+            Some(illegal_token) => panic!("Unexpected token: {:?}", illegal_token),
+            None => panic!("Unexpected end of input"),
         }
     }
 
     fn consume_keyword(&mut self) -> Node {
-        let token = self.consume_token();
+        let token = self.next_token();
         match token {
-            Token::BooleanValue(true) => Node::new(SyntaxKind::TrueKeyword, vec![]),
-            Token::BooleanValue(false) => Node::new(SyntaxKind::FalseKeyword, vec![]),
-            Token::NullValue => Node::new(SyntaxKind::NullKeyword, vec![]),
-            _ => unreachable!("Unexpected token of input"),
+            Some(Token::BooleanValue(true)) => Node::new(SyntaxKind::TrueKeyword, vec![]),
+            Some(Token::BooleanValue(false)) => Node::new(SyntaxKind::FalseKeyword, vec![]),
+            Some(Token::NullValue) => Node::new(SyntaxKind::NullKeyword, vec![]),
+            Some(illigal_token) => panic!("Unexpected token: {:?}", illigal_token),
+            None => unreachable!("Unexpected token of input"),
         }
     }
 
@@ -63,8 +59,8 @@ impl Parser {
             Some(Token::StringValue(s)) => s.clone(),
             _ => return Err("Unexpected Identifier".to_string()),
         };
-        self.consume_token(); // consume property name
-        self.consume_token(); // consume colon
+        self.next_token();
+        self.next_token();
         match self.consume_value() {
             Ok(value) => Ok(Node::new(
                 SyntaxKind::PropertyAssignment,
@@ -79,11 +75,11 @@ impl Parser {
 
     fn consume_object(&mut self) -> Result<Node, String> {
         let mut property_assignments = Vec::new();
-        self.consume_token(); // consume "{" LBrace
+        self.next_token();
         loop {
             match self.peek_token() {
                 Some(Token::RBrace) => {
-                    self.consume_token(); // consume "}" RBrace
+                    self.next_token();
                     break;
                 }
                 Some(Token::StringValue(_)) => match self.consume_property_assignment() {
@@ -91,7 +87,7 @@ impl Parser {
                     Err(e) => return Err(e),
                 },
                 Some(Token::Comma) => {
-                    self.consume_token();
+                    self.next_token();
                 }
                 _ => return Err("Unexpected token of input".to_string()),
             }
@@ -104,15 +100,15 @@ impl Parser {
 
     fn consume_array(&mut self) -> Result<Node, String> {
         let mut elements = Vec::new();
-        self.consume_token(); // consume "[" LBracket
+        self.next_token();
         loop {
             match self.peek_token() {
                 Some(Token::RBracket) => {
-                    self.consume_token(); // consume "]" RBracket
+                    self.next_token();
                     break;
                 }
                 Some(Token::Comma) => {
-                    self.consume_token();
+                    self.next_token();
                 }
                 _ => match self.consume_value() {
                     Ok(value) => elements.push(value),
