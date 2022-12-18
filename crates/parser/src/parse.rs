@@ -17,16 +17,8 @@ impl Parser {
         Parser { token_stream }
     }
 
-    pub fn peek_token(&mut self) -> Option<&Token> {
-        self.token_stream.peek()
-    }
-
-    pub fn next_token(&mut self) -> Option<Token> {
-        self.token_stream.next()
-    }
-
     fn consume_string(&mut self) -> Node {
-        let token = self.next_token();
+        let token = self.token_stream.next();
         match token {
             Some(Token::StringValue(value)) => Node::new(SyntaxKind::StringLiteral(value), vec![]),
             Some(illigal_token) => panic!("Unexpected token: {:?}", illigal_token),
@@ -35,7 +27,7 @@ impl Parser {
     }
 
     fn consume_number(&mut self) -> Node {
-        let token = self.next_token();
+        let token = self.token_stream.next();
         match token {
             Some(Token::NumberValue(value)) => Node::new(SyntaxKind::NumberLiteral(value), vec![]),
             Some(illegal_token) => panic!("Unexpected token: {:?}", illegal_token),
@@ -44,7 +36,7 @@ impl Parser {
     }
 
     fn consume_keyword(&mut self) -> Node {
-        let token = self.next_token();
+        let token = self.token_stream.next();
         match token {
             Some(Token::BooleanValue(true)) => Node::new(SyntaxKind::TrueKeyword, vec![]),
             Some(Token::BooleanValue(false)) => Node::new(SyntaxKind::FalseKeyword, vec![]),
@@ -55,12 +47,12 @@ impl Parser {
     }
 
     fn consume_property_assignment(&mut self) -> Result<Node, String> {
-        let property_name = match self.peek_token() {
+        let property_name = match self.token_stream.peek() {
             Some(Token::StringValue(s)) => s.clone(),
             _ => return Err("Unexpected Identifier".to_string()),
         };
-        self.next_token();
-        self.next_token();
+        self.token_stream.next();
+        self.token_stream.next();
         match self.consume_value() {
             Ok(value) => Ok(Node::new(
                 SyntaxKind::PropertyAssignment,
@@ -75,11 +67,11 @@ impl Parser {
 
     fn consume_object(&mut self) -> Result<Node, String> {
         let mut property_assignments = Vec::new();
-        self.next_token();
+        self.token_stream.next();
         loop {
-            match self.peek_token() {
+            match self.token_stream.peek() {
                 Some(Token::RBrace) => {
-                    self.next_token();
+                    self.token_stream.next();
                     break;
                 }
                 Some(Token::StringValue(_)) => match self.consume_property_assignment() {
@@ -87,7 +79,7 @@ impl Parser {
                     Err(e) => return Err(e),
                 },
                 Some(Token::Comma) => {
-                    self.next_token();
+                    self.token_stream.next();
                 }
                 _ => return Err("Unexpected token of input".to_string()),
             }
@@ -100,15 +92,15 @@ impl Parser {
 
     fn consume_array(&mut self) -> Result<Node, String> {
         let mut elements = Vec::new();
-        self.next_token();
+        self.token_stream.next();
         loop {
-            match self.peek_token() {
+            match self.token_stream.peek() {
                 Some(Token::RBracket) => {
-                    self.next_token();
+                    self.token_stream.next();
                     break;
                 }
                 Some(Token::Comma) => {
-                    self.next_token();
+                    self.token_stream.next();
                 }
                 _ => match self.consume_value() {
                     Ok(value) => elements.push(value),
@@ -120,7 +112,7 @@ impl Parser {
     }
 
     fn consume_value(&mut self) -> Result<Node, String> {
-        match self.peek_token() {
+        match self.token_stream.peek() {
             Some(Token::StringValue(_)) => Ok(self.consume_string()),
             Some(Token::NumberValue(_)) => Ok(self.consume_number()),
             Some(Token::BooleanValue(_)) | Some(Token::NullValue) => Ok(self.consume_keyword()),
@@ -131,7 +123,7 @@ impl Parser {
     }
 
     pub fn parse(&mut self) -> Node {
-        let first_token = self.peek_token();
+        let first_token = self.token_stream.peek();
         let result = match first_token {
             Some(Token::LBrace) => self.consume_object(),
             Some(Token::LBracket) => self.consume_array(),
@@ -172,7 +164,7 @@ mod tests {
 
         for (input, expected) in cases {
             let mut parser = Parser::new(input);
-            assert_eq!(parser.next_token(), Some(expected));
+            assert_eq!(parser.token_stream.next(), Some(expected));
         }
     }
 
