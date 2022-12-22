@@ -1,6 +1,5 @@
 #[derive(Debug, PartialEq, PartialOrd, Clone)]
 pub enum SyntaxKind {
-    SourceFile,
     StringLiteral(String),
     NumberLiteral(f64),
     TrueKeyword,
